@@ -25,11 +25,22 @@
 
 # raise exception and stop the load if there are trading days with no transaction counts
 check1_df= spark.sql("select * from edge.check_trade_day_with_no_txn")
-try:
-  if (check1_df.count() > 0):
-    raise Exception ("There are cases where on a trading day there has been no transactions")
-except Exception as e:
-  raise dbutils.notebook.exit(e)
+
+# CLEAN ALL TEMPORARY PANDAS IN-MEM DATAFRAME BEFORE RAISING EXCEPTION
+if (check1_df.count() > 0):
+  if (int(len(nrmRawDTRDIS.index)) > 0):
+    del nrmRawDTRDIS
+  if (int(len(nrmRawLINDIS.index)) > 0):
+    del nrmRawLINDIS
+  if (int(len(nrmRawBASKET.index)) > 0):
+    del nrmRawBASKET
+  if (int(len(nrmRawVOLDIS.index)) > 0):
+    del nrmRawVOLDIS
+  if (int(len(nrmRawOTH.index)) > 0):
+    del nrmRawOTH
+  raise Exception ("Exception: There are cases where on a trading day there has been no transactions")
+# except Exception as e:
+#   raise dbutils.notebook.exit(e)
 
 # COMMAND ----------
 
@@ -65,8 +76,19 @@ except Exception as e:
 
 # raise exception for any distributor code and site code duplication
 check2_df= spark.sql("select * from edge.site_with_more_than_one_dt")
-try:
-  if (check2_df.count() > 0):
-    raise Exception ("There are cases where one site code has multiple distributors")
-except Exception as e:
-  raise dbutils.notebook.exit(e)
+
+# CLEAN ALL TEMPORARY PANDAS IN-MEM DATAFRAME BEFORE RAISING EXCEPTION
+if (check2_df.count() > 0):
+  if (int(len(nrmRawDTRDIS.index)) > 0):
+    del nrmRawDTRDIS
+  if (int(len(nrmRawLINDIS.index)) > 0):
+    del nrmRawLINDIS
+  if (int(len(nrmRawBASKET.index)) > 0):
+    del nrmRawBASKET
+  if (int(len(nrmRawVOLDIS.index)) > 0):
+    del nrmRawVOLDIS
+  if (int(len(nrmRawOTH.index)) > 0):
+    del nrmRawOTH
+  raise Exception ("Exception: There are cases where one site code has multiple distributors")
+# except Exception as e:
+#   raise dbutils.notebook.exit(e)

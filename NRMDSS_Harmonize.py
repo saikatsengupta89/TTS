@@ -65,9 +65,122 @@ allPromosDF_T1.createOrReplaceTempView("all_promos_t1")
 
 # COMMAND ----------
 
+promosLTYPRGDF = spark.sql("""
+                            select
+                            invoice_no,
+                            IO,
+                            value_based_promo_disc,
+                            header_lvl_disc,
+                            free_quantity_value,
+                            promotion_value
+                            from 
+                            (select 
+                              invoice_no,
+                              product_code,
+                              IO,
+                              value_based_promo_disc,
+                              header_lvl_disc,
+                              free_quantity_value,
+                              promotion_value,
+                              row_number() over(partition by invoice_no, IO order by product_code) RN
+                              from 
+                              (select 
+                                invoice_no,
+                                product_code,
+                                IO,
+                                nvl(sum(value_based_promo_disc),0) value_based_promo_disc,
+                                nvl(sum(header_lvl_disc),0) header_lvl_disc,
+                                nvl(sum(free_quantity_value),0) free_quantity_value,
+                                nvl(sum(promotion_value),0) promotion_value
+                                from all_promos_t1
+                                where promotion_type='LTYPRG'
+                                group by invoice_no, product_code, IO
+                              )
+                            ) where RN=1 
+                           """)
+promosLTYPRGDF.createOrReplaceTempView ("data_ltyprg")
+
+# COMMAND ----------
+
+nonLtyprgDF= spark.sql("select * from all_promos_t1 where promotion_type!='LTYPRG'")
+
+ltyprgDF = spark.sql("""
+                      select 
+                      country,
+                      year_id,
+                      month_id,
+                      time_key,
+                      calendar_day,
+                      distributor_code,
+                      site_code,
+                      outlet_code,
+                      q1.invoice_no,
+                      invoice_category,
+                      billing_item,
+                      product_code,
+                      promotion_id,
+                      q1.IO,
+                      promotion_mechanism,
+                      promotion_desc,
+                      promo_start_date,
+                      promo_end_date,
+                      promotion_type,
+                      sum(nvl(value_based_promo_disc,0)) value_based_promo_disc,
+                      sum(nvl(header_lvl_disc,0)) header_lvl_disc,
+                      sum(free_qty_in_cs) free_qty_in_cs,
+                      sum(free_qty_in_pc) free_qty_in_pc,
+                      sum(free_qty_val_in_cs) free_qty_val_in_cs,
+                      sum(free_qty_val_in_pc) free_qty_val_in_pc,
+                      sum(free_qty_retail_price_pc) free_qty_retail_price_pc,
+                      sum(nvl(free_quantity_value,0)) free_quantity_value,
+                      on_off_flag,
+                      sum(nvl(promotion_value,0)) promotion_value
+                      from
+                      (select 
+                          country,
+                          year_id,
+                          month_id,
+                          time_key,
+                          calendar_day,
+                          distributor_code,
+                          site_code,
+                          outlet_code,
+                          invoice_no,
+                          invoice_category,
+                          billing_item,
+                          product_code,
+                          promotion_id,
+                          IO,
+                          promotion_mechanism,
+                          promotion_desc,
+                          promo_start_date,
+                          promo_end_date,
+                          promotion_type,
+                          free_qty_in_cs,
+                          free_qty_in_pc,
+                          free_qty_val_in_cs,
+                          free_qty_val_in_pc,
+                          free_qty_retail_price_pc,
+                          on_off_flag,
+                          row_number() over(partition by invoice_no, IO order by 1) RN
+                        from all_promos_t1 q1
+                        where promotion_type='LTYPRG'
+                      ) q1
+                      left outer join data_ltyprg q2 on q1.invoice_no = q2.invoice_no and q1.IO= q2.IO and q1.RN=1
+                      group by country, year_id, month_id, time_key, calendar_day, distributor_code,
+                      site_code, outlet_code, q1.invoice_no, invoice_category, billing_item, product_code,
+                      promotion_id, q1.IO, promotion_mechanism, promotion_desc, promo_start_date, promo_end_date,
+                      promotion_type, on_off_flag
+                      """)
+
+allPromosDF= nonLtyprgDF.union(ltyprgDF)
+allPromosDF.createOrReplaceTempView("all_promos")
+
+# COMMAND ----------
+
 # MAGIC %sql
 # MAGIC select promotion_type, promotion_mechanism, sum(promotion_value) promotion_value
-# MAGIC from all_promos_t1
+# MAGIC from all_promos
 # MAGIC group by promotion_type, promotion_mechanism
 # MAGIC order by 1,2;
 
@@ -75,11 +188,11 @@ allPromosDF_T1.createOrReplaceTempView("all_promos_t1")
 
 # WRITE THE HARMONIZED PROMO DATA TO PROCESSED LAYER IN YEAR/MONTH/DAY PARTITION
 (
-allPromosDF_T1.repartition(2)
-              .write
-              .partitionBy("year_id", "month_id", "time_key")
-              .mode("overwrite")
-              .format("parquet")
-              .option("compression","snappy")
-              .save(pathPrcNRMDSS)
+allPromosDF.repartition(2)
+           .write
+           .partitionBy("year_id", "month_id", "time_key")
+           .mode("overwrite")
+           .format("parquet")
+           .option("compression","snappy")
+           .save(pathPrcNRMDSS)
 )

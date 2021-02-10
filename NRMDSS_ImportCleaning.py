@@ -8,12 +8,15 @@ from typing import List
 # Enable Arrow-based columnar data transfers
 spark.conf.set("spark.sql.execution.arrow.enabled", "true")
 spark.conf.set("spark.sql.execution.arrow.pyspark.fallback.enabled","true")
-# dbutils.widgets.text("processingYear","2019")
-# dbutils.widgets.text("processingMonth","01")
 processingYear  =dbutils.widgets.get("ProcessingYear")
 processingMonth =dbutils.widgets.get("ProcessingMonth")
+validationThreshold =float(dbutils.widgets.get("ValidationThreshold"))
 yearMonth= int(processingYear+processingMonth)
 print(yearMonth)
+
+# dbutils.widgets.text("ProcessingYear","2020")
+# dbutils.widgets.text("ProcessingMonth","02")
+# dbutils.widgets.text("ValidationThreshold", "50")
 
 # COMMAND ----------
 
@@ -408,7 +411,7 @@ nrmRawDF_T1.createOrReplaceTempView("nrm_raw_df_t1")
 
 nrmRawDFDT = spark.sql("select nrm.* "+
                        "from nrm_raw_df_t1 nrm "+
-                       "inner join site_dt dt "+
+                       "inner join list_site dt "+
                        "on nrm.site_code = dt.site_code")
 nrmRawDFDT= nrmRawDFDT.repartition(20)
 nrmRawDFDT.createOrReplaceTempView ("nrm_raw_data")

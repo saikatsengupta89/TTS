@@ -16,24 +16,24 @@ distributorDF= spark.read.option("header","true") \
 #                          .option("inferSchema","true") \
 #                          .csv(distributorFilePath)
 
-distributorDF.createOrReplaceTempView("tran_distributor")
+distributorDF.createOrReplaceTempView("dim_distributor")
 
 distributorDF_T1= spark.sql("select distinct "+
                             "distributor_code "+
-                            "from tran_distributor "+
+                            "from dim_distributor "+
                             "where country_code ='VN' "+
                             "and distributor_type = 'C10000' "+
                             "and distributor_code is not null"
                             )
-distributorDF_T1.createOrReplaceTempView("distributor_dt")
+distributorDF_T1.createOrReplaceTempView("list_distributor")
 
 siteDF= spark.sql("select distinct "+
                   "site_code "+
-                  "from tran_distributor "+
+                  "from dim_distributor "+
                   "where country_code ='VN' "+
                   "and distributor_type = 'C10000'"
                  )
-siteDF.createOrReplaceTempView ("site_dt")
+siteDF.createOrReplaceTempView ("list_site")
 
 # COMMAND ----------
 
@@ -45,13 +45,13 @@ distSiteList.createOrReplaceTempView("distributor_lkp")
 
 # COMMAND ----------
 
-# MAGIC %sql
-# MAGIC /* validate distributor list with full scope */
-# MAGIC select * from (
-# MAGIC select distinct s.site_code, lkp.Site
-# MAGIC from site_dt s
-# MAGIC full outer join (select * from distributor_lkp where `Distributor Type`='DT DISTRIBUTOR') lkp
-# MAGIC on s.site_code= lkp.Site
-# MAGIC ) Q
-# MAGIC where (site is null or Site is null)
-# MAGIC order by 1,2
+# %sql
+# /* validate distributor list with full scope */
+# select * from (
+# select distinct s.site_code, lkp.Site
+# from list_site s
+# full outer join (select * from distributor_lkp where `Distributor Type`='DT DISTRIBUTOR') lkp
+# on s.site_code= lkp.Site
+# ) Q
+# where (site is null or Site is null)
+# order by 1,2

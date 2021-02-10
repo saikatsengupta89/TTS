@@ -9,8 +9,8 @@ yearMonth= int(processingYear+processingMonth)
 
 #get the latest trading day snapshot and create the required trading Day dataframe
 yearTD = str(max([int(i.name.replace('/','')) for i in dbutils.fs.ls (tradingDayPath)]))
-monthTD= str(max([int(i.name.replace('/','')) for i in dbutils.fs.ls (tradingDayPath +"/" +str(yearTD))]))
-dayTD  = str(max([int(i.name.replace('/','')) for i in dbutils.fs.ls (tradingDayPath +"/"+str(yearTD)+"/"+str(monthTD))]))
+monthTD= str(max([int(i.name.replace('/','')) for i in dbutils.fs.ls (tradingDayPath +"/" +str(yearTD))])).zfill(2)
+dayTD  = str(max([int(i.name.replace('/','')) for i in dbutils.fs.ls (tradingDayPath +"/"+str(yearTD)+"/"+str(monthTD))])).zfill(2)
 # print(maxYearTD)
 # print(maxMonthTD)
 # print(maxDayTD)
